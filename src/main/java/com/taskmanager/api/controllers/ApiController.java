@@ -9,27 +9,29 @@ import com.taskmanager.api.domains.User;
 import com.taskmanager.api.utils.TokenManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users")
-public class TaskManagerController {
+public class ApiController {
 
     private UserDAO userDAO;
     private ProjectDAO projectDAO;
     private TaskDAO taskDAO;
     private PasswordEncoder passwordEncoder;
 
-    public TaskManagerController(UserDAO userDAO, ProjectDAO projectDAO, TaskDAO taskDAO, PasswordEncoder passwordEncoder) {
+    public ApiController(UserDAO userDAO, ProjectDAO projectDAO, TaskDAO taskDAO, PasswordEncoder passwordEncoder) {
         this.userDAO = userDAO;
         this.projectDAO = projectDAO;
         this.taskDAO = taskDAO;
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostMapping("")
-    public ResponseEntity register(@RequestBody User user) {
+    @PostMapping("roles/{role_id}")
+    @Secured("ROLE_ADMIN")
+    public ResponseEntity register(@RequestBody User user, @PathVariable("role_id") long roleId) {
 
         if (this.findUserByUsername(user.getEmail()).toString().equalsIgnoreCase(ResponseEntity.ok(HttpStatus.NOT_FOUND).toString())) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));

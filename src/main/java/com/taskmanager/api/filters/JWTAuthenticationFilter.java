@@ -2,7 +2,10 @@ package com.taskmanager.api.filters;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.taskmanager.api.domains.Role;
 import com.taskmanager.api.domains.User;
+import com.taskmanager.api.interfaces.GrantedAuth;
+import com.taskmanager.api.repositories.UserRepo;
 import com.taskmanager.api.utils.Constants;
 import com.taskmanager.api.utils.TokenManager;
 import io.jsonwebtoken.Jwts;
@@ -10,6 +13,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -28,9 +32,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     private AuthenticationManager authenticationManager;
+    private UserRepo userRepo;
 
-    public JWTAuthenticationFilter(AuthenticationManager authenticationManager) {
+    public JWTAuthenticationFilter(AuthenticationManager authenticationManager, UserRepo userRepo) {
         this.authenticationManager = authenticationManager;
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -40,7 +46,9 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         objectMapper.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true);
         try {
             User user = objectMapper.readValue(request.getInputStream(), User.class);
-            return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword(), new ArrayList<>()));
+            Role role = userRepo.findByEmail(user.getEmail()).getRole();
+            System.out.println("Role: " + role.getName());
+            return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword(), TokenManager.getAuthorities(role)));
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -59,5 +67,4 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         TokenManager.addToken(user.getUsername(), token);
         response.addHeader("Authorization", "Bearer " + token);
     }
-
 }

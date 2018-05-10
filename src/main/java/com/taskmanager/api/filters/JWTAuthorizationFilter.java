@@ -1,10 +1,11 @@
 package com.taskmanager.api.filters;
 
+import com.taskmanager.api.domains.Role;
+import com.taskmanager.api.repositories.UserRepo;
 import com.taskmanager.api.utils.Constants;
 import com.taskmanager.api.utils.TokenManager;
 import io.jsonwebtoken.Jwts;
 import java.io.IOException;
-import java.util.ArrayList;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -20,8 +21,11 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
  */
 public class JWTAuthorizationFilter extends BasicAuthenticationFilter {
 
-    public JWTAuthorizationFilter(AuthenticationManager authenticationManager) {
+    private UserRepo userRepo;
+
+    public JWTAuthorizationFilter(AuthenticationManager authenticationManager, UserRepo userRepo) {
         super(authenticationManager);
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -39,9 +43,10 @@ public class JWTAuthorizationFilter extends BasicAuthenticationFilter {
 
     private UsernamePasswordAuthenticationToken getAuthentication(String token) {
 
-        String user = Jwts.parser().setSigningKey(Constants.SECRET_WORD.getBytes()).parseClaimsJws(token.replace("Bearer ", "")).getBody().getSubject();
-        if (user != null && !TokenManager.isBlackListed(user)) {
-            return new UsernamePasswordAuthenticationToken(user, null, new ArrayList<>());
+        String username = Jwts.parser().setSigningKey(Constants.SECRET_WORD.getBytes()).parseClaimsJws(token.replace("Bearer ", "")).getBody().getSubject();
+        if (username != null && !TokenManager.isBlackListed(username)) {
+            Role role = userRepo.findByEmail(username).getRole();
+            return new UsernamePasswordAuthenticationToken(username, null, TokenManager.getAuthorities(role));
         }
         return null;
     }
